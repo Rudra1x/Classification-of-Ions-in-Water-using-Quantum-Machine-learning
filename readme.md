@@ -191,7 +191,7 @@ meta_features = np.concatenate(probs_per_model, axis=1)
 final_preds = meta.predict(meta_features)
 👥 Contact & Credits
 
-Primary author: Ruraksh Sharma
+Primary author: Rudraksh Sharma
 
 Code & artifacts: Included in repository root.
 
