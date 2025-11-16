@@ -80,21 +80,171 @@ flowchart LR
   F --> G[Classical head]
   G --> H[Softmax per-variant]
   H --> I[OOF probs -> Stack (Logistic) -> Final label]
-
-
-Variant,Qubits,Layers,Encoder Hidden
-v6_2,6,2,48
-v7_3,7,3,48
-v8_3,8,3,64
 ```
 
 
+### ⚛️ Quantum Details
+* **Backend:** PennyLane `default.qubit` (simulator).
+* **Input encoding:** AngleEmbedding with angles = `tanh(encoder_output) * π` (ensures bounds).
+* **Ansatz:** `StronglyEntanglingLayers(weights)` with shape `(n_layers, n_qubits, 3)`.
+* **QNode returns:** `[⟨Z_0⟩, ..., ⟨Z_n-1⟩]` used as classical features for the head.
 
+### 🖥️ Classical Head
+* **Dense layers:** `Linear(n_qubits, hidden)` $\rightarrow$ `ReLU` $\rightarrow$ `Dropout` $\rightarrow$ `Linear(hidden, 4)`.
 
+---
 
-⚛️ Quantum DetailsBackend: 
--PennyLane default.qubit (simulator).
--Input encoding: AngleEmbedding with angles = tanh(encoder_output) * π (ensures bounds).
--Ansatz: StronglyEntanglingLayers(weights) with shape (n_layers, n_qubits, 3).
--QNode returns: [⟨Z_0⟩, ..., ⟨Z_n-1⟩] used as classical features for the head.
-🖥️ Classical HeadDense layers: Linear(n_qubits, hidden) $\rightarrow$ ReLU $\rightarrow$ Dropout $\rightarrow$ Linear(hidden, 4).
+## 🚀 Training Strategy
+* **K-Fold:** `KFOLD = 3` (stratified) to get out-of-fold (OOF) probabilities for stacking.
+* **Pretrain:** Pretrain encoder classically (with a small head) for a few epochs to warm-start the encoder.
+* **Hybrid training:** Train full model (encoder + q-layer + head) with `FocalLoss` (gamma ~ 1.5) or `CrossEntropy` with slight class weights as needed.
+* **Optimizers:**
+    * Pretrain: `Adam` (1e-3)
+    * Hybrid: `Adam` (5e-4)
+* **Schedulers:** `ReduceLROnPlateau` on validation accuracy.
+* **Early stopping:** Patience ~6–7 epochs.
+* **Ensembling:** Soft-average of variant probabilities $\rightarrow$ stacked meta-model (`LogisticRegression` on OOF probabilities).
+* **Final submission:** Use stacked predictions (meta model), saved reproducibly.
+
+---
+
+## 📈 Results (Final Artifacts)
+
+### Per-Variant OOF Accuracy
+* **v6\_2:** 64.88%
+* **v7\_3:** 66.49%
+* **v8\_3:** 65.95%
+
+### Ensembling
+* **Soft-average ensemble OOF accuracy:** 66.44%
+* **Stacked (logistic) OOF accuracy:** **67.76%** $\leftarrow$ **Final Choice**
+
+### Key Metrics (Stacked)
+
+**Overall Accuracy: 67.76%**
+
+**Per-Class Metrics (Stacked):**
+| Class | Precision | Recall | F1-Score |
+| :--- | :--- | :--- | :--- |
+| C0 | 0.5967 | 0.4274 | 0.4981 |
+| C1 | 0.6039 | 0.9182 | 0.7286 |
+| C2 | 0.9770 | 0.9823 | 0.9797 |
+| C3 | 0.5048 | 0.3826 | 0.4353 |
+
+> **Interpretation:** High accuracy for C2 and C1 (recall is very strong for C1 and C2). C0 and C3 need more attention — we mitigated this by stacking, but further improvements are possible (see Limitations & Future Work).
+
+---
+
+## 🗂️ Files & Deliverables
+
+* `train_hybrid_variants.py` — Full training pipeline (pretrain encoder, hybrid training, KFOLD, save models, produce OOF probs)
+* `inference.py` — Deterministic inference script that:
+    * Loads scalers + per-fold `.pth` model files
+    * Produces per-variant probabilities
+    * Concatenates features in the order used by the meta model
+    * Applies `meta_logistic.pkl` to produce final labels and probabilities
+    * Writes `submission.csv`
+* `meta_logistic.pkl` — Logistic stacking model (trained on OOF features)
+* `v6_2_fold1.pth`, ... `v8_3_fold3.pth` — Saved PyTorch hybrid weights
+* `scaler_v*_fold*.pkl` — Saved StandardScalers per fold
+* `oof_probs_variants.npy` — OOF probabilities for variantsTrain (Full Pipeline)
+Bash
+
+python train_hybrid_variants.py \
+  --data-files C0_dataset.csv C1_dataset.csv C2_dataset.csv C3_dataset.csv \
+  --kf 3 --batch 128 --pretrain-epochs 8 --hybrid-epochs 20
+Inference (Produces submission.csv)
+Bash
+
+python inference.py --models-dir ./models --meta meta_logistic.pkl --out submission.csv
+Quick Test / Micro-benchmark
+Run the small snippet in the training environment to measure per-batch cost and scale up estimates.
+
+📦 Submission Artifacts
+models.zip — Include all v*_fold*.pth + scaler_*.pkl + meta_logistic.pkl.
+
+submission.csv — Format: id,pred_label,prob_C0,prob_C1,prob_C2,prob_C3.
+
+report.pdf (2 pages) — Short methods, architecture diagram, metrics, confusion matrix.
+
+presentation.mp4 (3–5 min) — Team members present approach, encoding choice, and results.
+
+🏆 Practical Tips to Impress Judges
+Show reproducibility: Run inference.py end-to-end in a minute; show submission.csv matches OOF statistics.
+
+Explain physically: Connect each feature to sensor physics — judges love domain grounding.
+
+Visuals: Include a confusion-matrix heatmap, per-class ROC/F1 bar chart, and a tiny animation showing how angle encoding maps data to quantum states (simple 2D illustration).
+
+Ablation: Show single-variant vs. ensemble vs. stacked improvement clearly (1 slide).
+
+Resource honesty: Mention that QNode uses default.qubit (simulator) and describe how this would map to a real quantum backend or future GPU-accelerated simulators.
+
+Limitations: Be honest about classes C0/C3 tradeoffs and propose immediate fixes (below).
+
+🔬 Limitations & Future Work
+(How to push beyond 67.8%)
+
+More expressive encoding: Try small quantum kernels (QSVM) or amplitude encoding if you can increase qubit resources safely.
+
+Data augmentation: If realistic sensor-noise models exist, augment training data.
+
+Class-specific fine-tuning: Per-class specialized heads (or cost-sensitive training) to boost C0/C3.
+
+Temperature scaling / calibration: Calibrate stacked probabilities with a validation set.
+
+Use a faster quantum backend: Use PennyLane-Lightning or GPU-accelerated simulators to explore 10+ qubits / deeper layers.
+
+Ensemble diversity: Add more variant classes (different encoders, quantum ansatz types, classical baselines) — stacking benefits from diversity.
+
+💬 Judge-Friendly One-Liner (For Your Slide)
+We fused sensor physics + classical representation learning + quantum circuit expressivity and used stacking to boost robustness — resulting in a reproducible hybrid pipeline achieving 67.8% OOF accuracy on a 4-way ion classification task.
+
+📜 Appendix — Quick Inference Pseudo-code
+Python
+
+# load meta (joblib)
+meta = joblib.load("meta_logistic.pkl")
+
+probs_per_model = []
+
+for model_file, scaler_file in models_list:
+    scaler = joblib.load(scaler_file)
+    X_scaled = scaler.transform(X_test)
+    
+    model = HybridQNN(...)
+    model.load_state_dict(torch.load(model_file))
+    model.eval()
+    
+    probs = model.predict_proba(X_scaled)  # via batched torch inference -> softmax
+    probs_per_model.append(probs)
+
+# concat along axis=1 for meta features
+meta_features = np.concatenate(probs_per_model, axis=1)
+
+final_preds = meta.predict(meta_features)
+👥 Contact & Credits
+Team: Quantum Sensing Squad
+
+Primary author: Ruraksh Sharma
+
+Code & artifacts: Included in repository root.
+
+⚖️ License
+MIT — feel free to reuse and adapt. Please attribute if used in publications.
+* `ensemble_avg_probs.npy`, `stacked_oof_probs.npy` — Ensemble outputs
+* `README.md` — This file
+* `ablation.pdf` — 1-page figure comparing single-variant OOF vs soft-average vs stacked (export from notebook)
+
+---
+
+## 🔄 Reproduce — Environment & Commands
+
+### Environment Setup
+(Recommended conda env)
+```bash
+conda create -n qml-ion python=3.10 -y
+conda activate qml-ion
+pip install numpy pandas scikit-learn torch pennylane matplotlib joblib tqdm
+# (If you have a faster PennyLane plugin, install it here, e.g., pennylane-lightning)
+
