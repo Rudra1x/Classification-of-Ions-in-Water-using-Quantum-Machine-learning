@@ -57,9 +57,9 @@ The relationships between these features and the ion type are complex and non-li
 
 ---
 
-## 🔬 The Hybrid Quantum-Classical Solution
+## 🔬 The Quantum Solution
 
-We developed a Hybrid Quantum-Classical Neural Network (HQ-NN) designed to leverage the best of both worlds.
+We developed a Hybrid Quantum Neural Network (HQ-NN) designed to leverage the best of both worlds.
 
 
 1.  **Classical Encoder:** A classical feed-forward network (built in PyTorch) takes the 3 raw sensor features and "encodes" them into a higher-dimensional latent vector. This step is trainable, meaning the model *learns* the most effective way to prepare the data for the quantum circuit.
