@@ -50,7 +50,7 @@ The relationships between these features and the ion type are complex and non-li
 
 ## ✨ Key Features
 
-* **Hybrid Quantum-Classical Model:** Uses **PyTorch** for classical pre- and post-processing and **PennyLane** for the quantum core.
+* **Quantum Model:** Uses **PyTorch** for classical pre- and post-processing and **PennyLane** for the quantum core.
 * **Learnable Encoding:** Employs a classical encoder to learn the best way to represent 3 features in an $N_q$-dimensional quantum space.
 * **Robust Ensemble:** The final solution is a **stacked ensemble** of three HQ-NN variants (using 6, 7, and 8 qubits), combined with a Logistic Regression meta-model for a final, robust prediction.
 * **Advanced Training:** Uses a 3-fold stratified cross-validation scheme, **two-stage pretraining**, and **Focal Loss** to focus on hard-to-classify examples.
