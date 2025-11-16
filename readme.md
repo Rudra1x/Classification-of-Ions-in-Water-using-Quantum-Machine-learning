@@ -1,4 +1,4 @@
-### Problem
+#Problem
 Classify which ion (C₀, C₁, C₂, C₃) is present in an aqueous sample using three photonic-sensor features: wavelength, propagation constant (beta), electric field fraction (frac_campo).
 
 ### Solution
@@ -135,20 +135,6 @@ flowchart LR
 
 ---
 
-## 🗂️ Files & Deliverables
-
-* `train_hybrid_variants.py` — Full training pipeline (pretrain encoder, hybrid training, KFOLD, save models, produce OOF probs)
-* `inference.py` — Deterministic inference script that:
-    * Loads scalers + per-fold `.pth` model files
-    * Produces per-variant probabilities
-    * Concatenates features in the order used by the meta model
-    * Applies `meta_logistic.pkl` to produce final labels and probabilities
-    * Writes `submission.csv`
-* `meta_logistic.pkl` — Logistic stacking model (trained on OOF features)
-* `v6_2_fold1.pth`, ... `v8_3_fold3.pth` — Saved PyTorch hybrid weights
-* `scaler_v*_fold*.pkl` — Saved StandardScalers per fold
-* `oof_probs_variants.npy` — OOF probabilities for variantsTrain (Full Pipeline)
-Bash
 
 python train_hybrid_variants.py \
   --data-files C0_dataset.csv C1_dataset.csv C2_dataset.csv C3_dataset.csv \
@@ -160,27 +146,8 @@ python inference.py --models-dir ./models --meta meta_logistic.pkl --out submiss
 Quick Test / Micro-benchmark
 Run the small snippet in the training environment to measure per-batch cost and scale up estimates.
 
-📦 Submission Artifacts
-models.zip — Include all v*_fold*.pth + scaler_*.pkl + meta_logistic.pkl.
 
-submission.csv — Format: id,pred_label,prob_C0,prob_C1,prob_C2,prob_C3.
 
-report.pdf (2 pages) — Short methods, architecture diagram, metrics, confusion matrix.
-
-presentation.mp4 (3–5 min) — Team members present approach, encoding choice, and results.
-
-🏆 Practical Tips to Impress Judges
-Show reproducibility: Run inference.py end-to-end in a minute; show submission.csv matches OOF statistics.
-
-Explain physically: Connect each feature to sensor physics — judges love domain grounding.
-
-Visuals: Include a confusion-matrix heatmap, per-class ROC/F1 bar chart, and a tiny animation showing how angle encoding maps data to quantum states (simple 2D illustration).
-
-Ablation: Show single-variant vs. ensemble vs. stacked improvement clearly (1 slide).
-
-Resource honesty: Mention that QNode uses default.qubit (simulator) and describe how this would map to a real quantum backend or future GPU-accelerated simulators.
-
-Limitations: Be honest about classes C0/C3 tradeoffs and propose immediate fixes (below).
 
 🔬 Limitations & Future Work
 (How to push beyond 67.8%)
@@ -197,7 +164,6 @@ Use a faster quantum backend: Use PennyLane-Lightning or GPU-accelerated simulat
 
 Ensemble diversity: Add more variant classes (different encoders, quantum ansatz types, classical baselines) — stacking benefits from diversity.
 
-💬 Judge-Friendly One-Liner (For Your Slide)
 We fused sensor physics + classical representation learning + quantum circuit expressivity and used stacking to boost robustness — resulting in a reproducible hybrid pipeline achieving 67.8% OOF accuracy on a 4-way ion classification task.
 
 📜 Appendix — Quick Inference Pseudo-code
@@ -224,7 +190,6 @@ meta_features = np.concatenate(probs_per_model, axis=1)
 
 final_preds = meta.predict(meta_features)
 👥 Contact & Credits
-Team: Quantum Sensing Squad
 
 Primary author: Ruraksh Sharma
 
