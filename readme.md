@@ -70,7 +70,7 @@ To maximize robustness we:
 
 ## 🧠 Model Architecture & Quantum Component
 
-```mermaid
+```
 flowchart LR
   A[Raw CSVs] --> B[Concatenate]
   B --> C[StandardScaler]
@@ -81,7 +81,6 @@ flowchart LR
   G --> H[Softmax per-variant]
   H --> I[OOF probs -> Stack (Logistic) -> Final label]
 ```
-
 
 ### ⚛️ Quantum Details
 * **Backend:** PennyLane `default.qubit` (simulator).
