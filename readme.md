@@ -1,4 +1,4 @@
-#Problem
+# Problem
 Classify which ion (C₀, C₁, C₂, C₃) is present in an aqueous sample using three photonic-sensor features: wavelength, propagation constant (beta), electric field fraction (frac_campo).
 
 ### Solution
