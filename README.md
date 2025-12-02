@@ -1,6 +1,6 @@
 <div align="center">
 
-# QWater-Classify 
+# QWater-Classify [Winner - Qubit Quantum Hackathon 2025]
 
 ### A Hybrid Quantum-Classical Pipeline for Classifying Water Contaminants
 
